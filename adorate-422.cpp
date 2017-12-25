@@ -33,6 +33,9 @@ auto contains(const C& v, const T& x)
 }
 
 int main(int argc, char* argv[]) {
+    bool debug = true;
+
+
     if (argc != 4) {
         std::cerr << "usage: "<<argv[0]<<" thread-count inputfile b-limit"<< std::endl;
         return 1;
@@ -47,6 +50,9 @@ int main(int argc, char* argv[]) {
     construct_graph_from_file(infile, current_graph, nodes);
 
     for (int b_method = 0; b_method < b_limit + 1; b_method++) {
+        if (debug) {
+            std::cerr << "Start processing for b_method " << b_method << std::endl;
+        }
         // this is just to show the blimit with which the program is linked
 //        std::cerr << "bvalue node 44: " << bvalue(b_method, 44) << std::endl;
 
@@ -62,41 +68,67 @@ int main(int argc, char* argv[]) {
         std::vector<int> Q(nodes.begin(), nodes.end());
         while (!Q.empty()) {
             for (int current_node : Q) {
+                if (debug) {
+                    std::cerr << " Looking for mates for " << current_node << std::endl;
+                }
                 int b = bvalue(b_method, current_node);
                 while (T[current_node].size() < b) {
                     // Find the best candidate
+                    bool found_candidate = false;
+                    int current_best_weight = 0;
                     edge current_best_candidate_edge;
-                    current_best_candidate_edge.weight = 0;
-                    bool first_iter = true;
                     for (edge candidate_edge : current_graph[current_node]) {
                         if (!(contains(T[current_node], candidate_edge.to))) {
-                            if (!S[candidate_edge.to].empty() && (candidate_edge.weight < S[candidate_edge.to].top().weight)) {
-                                break;
-                            }
-                            if (first_iter) {
-                                current_best_candidate_edge = candidate_edge;
-                                first_iter = false;
-                            }
-                            if (candidate_edge.weight > current_best_candidate_edge.weight) {
-                                current_best_candidate_edge = candidate_edge;
+                            if ((!S[candidate_edge.to].empty() && (candidate_edge.weight > S[candidate_edge.to].top().weight))
+                                || (!S[candidate_edge.to].empty() && S[candidate_edge.to].size() < b)
+                                   || S[candidate_edge.to].empty()) {
+                                found_candidate = true;
+                                if (candidate_edge.weight > current_best_weight) {
+                                    current_best_candidate_edge = candidate_edge;
+                                    current_best_weight = candidate_edge.weight;
+                                    if (debug) {
+                                        std::cerr << "   " << candidate_edge.to << " with weight " << candidate_edge.weight
+                                                  << " is current best candidate for " << current_node << ", whose b = "
+                                                  << b << std::endl;
+                                    }
+                                }
+                                else {
+                                    if (debug) {
+                                        std::cerr << "   " << candidate_edge.to << " with weight " << candidate_edge.weight
+                                                  << " is not a suitable mate for " << current_node << ", whose b = "
+                                                  << b << std::endl;
+                                    }
+                                }
                             }
                         }
                     }
-                    if (first_iter) {
+                    if (!(found_candidate)) {
                         break;
                     }
                     else { // current_node will adorate current_best_candidate_edge
                         int candidate_node = current_best_candidate_edge.to;
-                        if (S[candidate_node].size() > bvalue(b_method, candidate_node)) {
-                            // Annuling
-                            edge annulled_edge = S[candidate_node].top();
-                            std::vector<int>::iterator position = std::find(T[annulled_edge.to].begin(), T[annulled_edge.to].end(), candidate_node);
-                            if (position != T[annulled_edge.to].end())
-                                T[annulled_edge.to].erase(position);
-                            R.push_back(annulled_edge.to);
+                        if (debug) {
+                            std::cerr << "  " << candidate_node << " is being married with " << current_node << std::endl;
                         }
 
-                        T[current_node].push_back(current_best_candidate_edge.to);
+                        if (S[candidate_node].size() == bvalue(b_method, candidate_node)) {
+                            // Annuling
+                            edge annulled_edge = S[candidate_node].top();
+                            S[candidate_node].pop();
+                            if (debug) {
+                                std::cerr << "   Annuling marriage between " << candidate_node << " and "
+                                          << annulled_edge.to << " with weight " << annulled_edge.weight << ", beacause "
+                                          << current_node << " is a better party with weight "
+                                          << current_best_candidate_edge.weight << std::endl;
+                            }
+                            std::vector<int>::iterator position = std::find(T[candidate_node].begin(),
+                                                                            T[candidate_node].end(),
+                                                                            annulled_edge.to);
+                            if (position != T[candidate_node].end())
+                                T[candidate_node].erase(position);
+                            R.push_back(annulled_edge.to);
+                        }
+                        T[current_node].push_back(candidate_node);
 
                         // Find corresponding edge in the opposite direction
                         std::vector<edge> edges_of_candidate = current_graph[candidate_node];
@@ -106,28 +138,54 @@ int main(int argc, char* argv[]) {
                                 break;
                             }
                         }
-
                     }
                 }
+            }
+            if (debug) {
+                for (auto a : T) {
+                    std::cerr << " T[" << a.first << "] = ";
+                    for (auto b : a.second) {
+                        std::cerr << b << " ";
+                    }
+                    std::cerr << std::endl;
+                }
+                std::map<int, std::priority_queue<edge>> temp = S;
+                for (auto a : temp) {
+                    std::cerr << " S[" << a.first << "] = ";
+                    while (!a.second.empty()) {
+                        std::cerr << a.second.top().to << " ";
+                        a.second.pop();
+                    }
+                    std::cerr << std::endl;
+                }
+
             }
             Q = R;
             R.clear();
         }
-        std::vector<int> already_printed;
-        for (std::pair<const int, std::priority_queue<edge>> & e : S) {
-            if (!(contains(already_printed, e.first))) {
-                already_printed.push_back(e.first);
-                int counter = 0;
-                while(!e.second.empty()) {
-                    counter += e.second.top().weight;
-                    e.second.pop();
-                }
-                if (counter != 0)
-                std::cout << counter << std::endl;
-            }
+
+        if (debug) {
+            std::cerr << "Done processing for b_method " << b_method << std::endl;
         }
 
-        // Print out a sum of weights of b-matchings
+        std::set<int> already_printed;
+        int counter = 0;
+        for (std::pair<const int, std::priority_queue<edge>> & e : S) {
+            if (!(contains(already_printed, e.first))) {
+                already_printed.insert(e.first);
+
+                while(!e.second.empty()) {
+                    edge top = e.second.top();
+                    if (!(contains(already_printed, top.to))) {
+                        counter += top.weight;
+                    }
+
+                    e.second.pop();
+                }
+            }
+        }
+        std::cout << counter << std::endl;
+
 
     }
 }
