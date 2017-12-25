@@ -14,9 +14,8 @@
 struct edge {
     int to;
     int weight;
-    bool operator<(const edge& rhs) const
-    {
-        return (weight > rhs.weight) || !(weight==rhs.weight);
+    bool operator < (const edge& rhs) const {
+        return (weight >= rhs.weight);
     }
 };
 
@@ -80,7 +79,7 @@ int main(int argc, char* argv[]) {
                     for (edge candidate_edge : current_graph[current_node]) {
                         if (!(contains(T[current_node], candidate_edge.to))) {
                             if ((!S[candidate_edge.to].empty() && (candidate_edge.weight > S[candidate_edge.to].top().weight))
-                                || (!S[candidate_edge.to].empty() && S[candidate_edge.to].size() < b)
+                                || (!S[candidate_edge.to].empty() && S[candidate_edge.to].size() < bvalue(b_method, candidate_edge.to))
                                    || S[candidate_edge.to].empty()) {
                                 found_candidate = true;
                                 if (candidate_edge.weight > current_best_weight) {
@@ -121,11 +120,11 @@ int main(int argc, char* argv[]) {
                                           << current_node << " is a better party with weight "
                                           << current_best_candidate_edge.weight << std::endl;
                             }
-                            std::vector<int>::iterator position = std::find(T[candidate_node].begin(),
-                                                                            T[candidate_node].end(),
-                                                                            annulled_edge.to);
-                            if (position != T[candidate_node].end())
-                                T[candidate_node].erase(position);
+                            std::vector<int>::iterator position = std::find(T[annulled_edge.to].begin(),
+                                                                            T[annulled_edge.to].end(),
+                                                                            candidate_node);
+                            if (position != T[annulled_edge.to].end())
+                                T[annulled_edge.to].erase(position);
                             R.push_back(annulled_edge.to);
                         }
                         T[current_node].push_back(candidate_node);
