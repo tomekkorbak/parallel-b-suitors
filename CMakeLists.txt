@@ -16,6 +16,6 @@ macro (add_executable _name)
     endif()
 endmacro()
 
-add_executable(adorate adorate-422.cpp blimit.cpp)
+add_executable(adorate adorate.cpp blimit.cpp thread_pool.h utils.h graph.h algo.h constants.h thread_pool.h)
 
-install(TARGETS DESTINATION "adorators-files(1)/ab123456")
+install(TARGETS DESTINATION "adorators-files")
