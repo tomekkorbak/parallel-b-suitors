@@ -12,7 +12,7 @@ The implementation was evaluated on datasets from [Stanford Large Network Datase
 
 ```bash
 cmake .
-./adaroate thread-count inputfile b-limit
+./adorate thread-count inputfile b-limit
 ```
 
 `inputfile` is a path to file containing the graph (each line specifies two vertices ids and a weight). ``b-limit`` is the maximal *b*. `blimit.cpp` implements an assignment of *b* to each vertex.
